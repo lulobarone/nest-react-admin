@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Switch } from 'react-router-dom';
 
+import UserProfile from './components/user/UserProfile';
 import useAuth from './hooks/useAuth';
 import Contents from './pages/Contents';
 import Courses from './pages/Courses';
@@ -38,6 +39,7 @@ export default function App() {
       <Switch>
         <PrivateRoute exact path="/" component={Dashboard} />
         <PrivateRoute exact path="/users" component={Users} roles={['admin']} />
+        <PrivateRoute exact path="/user-profile" component={UserProfile} />
         <PrivateRoute exact path="/courses" component={Courses} />
         <PrivateRoute exact path="/courses/:id" component={Contents} />
 

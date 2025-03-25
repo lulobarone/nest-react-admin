@@ -1,4 +1,4 @@
-import { BookOpen, Home, LogOut, Users } from 'react-feather';
+import { BookOpen, Edit, Home, LogOut, Users } from 'react-feather';
 import { useHistory } from 'react-router';
 import { Link } from 'react-router-dom';
 
@@ -22,28 +22,46 @@ export default function Sidebar({ className }: SidebarProps) {
   };
 
   return (
-    <div className={'sidebar ' + className}>
+    <div className={`sidebar ${className}`}>
+      <img
+        src={`${process.env.PUBLIC_URL}/sidemenu-bg.jpg`}
+        alt="sidebar"
+        className="absolute inset-0 w-full h-full"
+        style={{ zIndex: -1, opacity: 0.8 }}
+      />
+      <div
+        className="absolute inset-0 bg-black opacity-70"
+        style={{ zIndex: -1 }}
+      />
       <Link to="/" className="no-underline text-black">
-        <h1 className="font-semibold text-center">Carna Project</h1>
+        <img
+          src={`${process.env.PUBLIC_URL}/urbano-logo-white.png`}
+          alt="logo-urbano"
+          className="h-auto mx-auto mt-5"
+        />
       </Link>
-      <nav className="mt-5 flex flex-col gap-3 flex-grow">
+      <nav className="mt-20 flex flex-col gap-3 flex-grow">
         <SidebarItem to="/">
-          <Home /> Dashboard
+          <Home /> Panel principal
         </SidebarItem>
         <SidebarItem to="/courses">
-          <BookOpen /> Courses
+          <BookOpen /> Cursos
         </SidebarItem>
         {authenticatedUser.role === 'admin' ? (
           <SidebarItem to="/users">
-            <Users /> Users
+            <Users /> Usuarios
           </SidebarItem>
         ) : null}
+        <SidebarItem to="/user-profile">
+          <Edit /> Editar perfil
+        </SidebarItem>
       </nav>
+
       <button
         className="text-red-500 rounded-md p-3 transition-colors flex gap-3 justify-center items-center font-semibold focus:outline-none"
         onClick={handleLogout}
       >
-        <LogOut /> Logout
+        <LogOut /> Cerrar sesion
       </button>
     </div>
   );

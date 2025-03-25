@@ -9,12 +9,14 @@ class UserService {
     await apiService.post('/api/users', createUserRequest);
   }
 
-  async findAll(userQuery: UserQuery): Promise<User[]> {
-    return (
-      await apiService.get<User[]>('/api/users', {
-        params: userQuery,
-      })
-    ).data;
+  async findAll(params: UserQuery): Promise<{ users: User[]; count: number }> {
+    const response = await apiService.get('/api/users', {
+      params,
+    });
+    return {
+      users: response.data.users,
+      count: response.data.count,
+    };
   }
 
   async findOne(id: string): Promise<User> {

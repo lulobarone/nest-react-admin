@@ -23,20 +23,29 @@ export class UserService {
     return User.create(createUserDto).save();
   }
 
-  async findAll(userQuery: UserQuery): Promise<User[]> {
+  async findAll(
+    userQuery: UserQuery,
+  ): Promise<{ users: User[]; total: number }> {
+    const page = userQuery.page;
+    const pageSize = userQuery.pageSize;
+    const queryfind = {};
     Object.keys(userQuery).forEach((key) => {
-      if (key !== 'role') {
-        userQuery[key] = ILike(`%${userQuery[key]}%`);
+      if (!['pageSize', 'page'].includes(key)) {
+        queryfind[key] = ILike(`%${userQuery[key]}%`);
       }
     });
 
-    return User.find({
-      where: userQuery,
+    const [users, total] = await User.findAndCount({
+      where: queryfind,
       order: {
         firstName: 'ASC',
         lastName: 'ASC',
       },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
+
+    return { users, total };
   }
 
   async findById(id: string): Promise<User> {
@@ -87,6 +96,13 @@ export class UserService {
 
   async count(): Promise<number> {
     return await User.count();
+  }
+
+  async latestUsers(): Promise<User[]> {
+    return await User.find({
+      order: { id: 'DESC' },
+      take: 5,
+    });
   }
 
   /* Hash the refresh token and save it to the database */

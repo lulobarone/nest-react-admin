@@ -1,27 +1,70 @@
-import { useState } from 'react';
-import { Loader, Plus, X } from 'react-feather';
+import { useEffect, useState } from 'react';
+import { ChevronLeft, Loader, Plus, X } from 'react-feather';
 import { useForm } from 'react-hook-form';
-import { useQuery } from 'react-query';
 import { useParams } from 'react-router';
+import { Link } from 'react-router-dom';
 
 import ContentsTable from '../components/content/ContentsTable';
 import Layout from '../components/layout';
 import Modal from '../components/shared/Modal';
+import Pagination from '../components/shared/Pagination';
 import useAuth from '../hooks/useAuth';
 import CreateContentRequest from '../models/content/CreateContentRequest';
 import contentService from '../services/ContentService';
-import courseService from '../services/CourseService';
 
 export default function Course() {
   const { id } = useParams<{ id: string }>();
+  const [filterData, setFilterData] = useState({
+    name: '',
+    description: '',
+    dateCreated: '',
+    imageUrl: '',
+  });
+  const [courseName, setCourseName] = useState('');
+  const [data, setData] = useState([]);
+  const [pagination, setPagination] = useState<{
+    current: number;
+    pageSize: number;
+  }>({
+    current: 1,
+    pageSize: 5,
+  });
+  const [addContentShow, setAddContentShow] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [count, setCount] = useState<number>(0);
+  const [error, setError] = useState<string>();
+  const [sortMenuVisible, setSortMenuVisible] = useState(false);
   const { authenticatedUser } = useAuth();
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [addContentShow, setAddContentShow] = useState<boolean>(false);
-  const [error, setError] = useState<string>();
+  const sortData = (sortValue: 'name' | 'description' | 'dateCreated') => {
+    const sortedData = [...data].sort((a, b) =>
+      a[sortValue].localeCompare(b[sortValue]),
+    );
+    setData(sortedData);
+    setSortMenuVisible(false);
+  };
 
-  const userQuery = useQuery('user', async () => courseService.findOne(id));
+  const getContents = async () => {
+    try {
+      setIsLoading(true);
+      const { contents, count, courseName } = await contentService.findAll({
+        courseId: id,
+        name: filterData.name || undefined,
+        description: filterData.description || undefined,
+        dateCreated: filterData.dateCreated || undefined,
+        imageUrl: filterData.imageUrl || undefined,
+        page: pagination.current,
+        pageSize: pagination.pageSize,
+      });
+      setCourseName(courseName);
+      setData(contents);
+      setCount(count);
+      setIsLoading(false);
+    } catch (error) {
+      setError('Error al buscar contenidos');
+      setIsLoading(false);
+    }
+  };
 
   const {
     register,
@@ -30,69 +73,137 @@ export default function Course() {
     reset,
   } = useForm<CreateContentRequest>();
 
-  const { data, isLoading } = useQuery(
-    [`contents-${id}`, name, description],
-    async () =>
-      contentService.findAll(id, {
-        name: name || undefined,
-        description: description || undefined,
-      }),
-    {
-      refetchInterval: 1000,
-    },
-  );
-
   const saveCourse = async (createContentRequest: CreateContentRequest) => {
     try {
       await contentService.save(id, createContentRequest);
       setAddContentShow(false);
       reset();
+      getContents();
       setError(null);
     } catch (error) {
       setError(error.response.data.message);
     }
   };
 
+  const handlePage = (nextPage: number) => {
+    setFilterData({ name: '', description: '', dateCreated: '', imageUrl: '' });
+    setPagination((prev) => ({ ...prev, current: nextPage }));
+  };
+
+  useEffect(() => {
+    getContents();
+  }, [pagination]);
+
   return (
     <Layout>
-      <h1 className="font-semibold text-3xl mb-5">
-        {!userQuery.isLoading ? `${userQuery.data.name} Contents` : ''}
-      </h1>
-      <hr />
-      {authenticatedUser.role !== 'user' ? (
-        <button
-          className="btn my-5 flex gap-2 w-full sm:w-auto justify-center"
-          onClick={() => setAddContentShow(true)}
-        >
-          <Plus /> Add Content
-        </button>
-      ) : null}
-
+      <div className="flex justify-between items-start mb-10">
+        {!isLoading ? (
+          <div className="flex items-center">
+            <Link to="/courses">
+              <ChevronLeft />
+            </Link>
+            <h1 className="font-semibold text-3xl mb-1 ml-5">
+              {courseName.toUpperCase()}
+            </h1>
+          </div>
+        ) : (
+          <div />
+        )}
+        {authenticatedUser.role !== 'user' ? (
+          <button
+            className="btn flex gap-2 w-full sm:w-auto justify-center"
+            onClick={() => setAddContentShow(true)}
+          >
+            <Plus /> Agregar contenido al curso
+          </button>
+        ) : null}
+      </div>
       <div className="table-filter">
         <div className="flex flex-row gap-5">
           <input
             type="text"
-            className="input w-1/2"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            className="input w-40"
+            placeholder="Nombre"
+            value={filterData.name}
+            onChange={(e) =>
+              setFilterData({ ...filterData, name: e.target.value })
+            }
           />
           <input
             type="text"
-            className="input w-1/2"
-            placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            className="input w-40"
+            placeholder="Descripcion"
+            value={filterData.description}
+            onChange={(e) =>
+              setFilterData({ ...filterData, description: e.target.value })
+            }
           />
+          <div className="flex items-center">
+            <p className="text-center w-30 mr-1">A partir de:</p>
+            <input
+              type="date"
+              className="input w-40"
+              value={filterData.dateCreated}
+              onChange={(e) =>
+                setFilterData({ ...filterData, dateCreated: e.target.value })
+              }
+            />
+          </div>
+          <button className="btn w-40" onClick={getContents}>
+            Buscar
+          </button>
+          <div>
+            <button
+              className="btn outline w-40"
+              onClick={() => setSortMenuVisible(!sortMenuVisible)}
+            >
+              Ordenar
+            </button>
+            {sortMenuVisible && (
+              <div className="absolute z-2 bg-white border rounded shadow-md mt-1">
+                <button
+                  className="block px-4 py-2 text-left w-full hover:bg-gray-200"
+                  onClick={() => sortData('name')}
+                >
+                  Por nombre
+                </button>
+                <button
+                  className="block px-4 py-2 text-left w-full hover:bg-gray-200"
+                  onClick={() => sortData('description')}
+                >
+                  Por descripcion
+                </button>
+                <button
+                  className="block px-4 py-2 text-left w-full hover:bg-gray-200"
+                  onClick={() => sortData('dateCreated')}
+                >
+                  Por fecha
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <ContentsTable data={data} isLoading={isLoading} courseId={id} />
+      <ContentsTable
+        data={data}
+        isLoading={isLoading}
+        courseId={id}
+        getContents={getContents}
+      />
+
+      {/* Paginacion */}
+      <Pagination
+        pagination={pagination}
+        handleNextPage={() => handlePage(pagination.current + 1)}
+        handlePrevPage={() => handlePage(pagination.current - 1)}
+        count={count}
+      />
 
       {/* Add User Modal */}
       <Modal show={addContentShow}>
         <div className="flex">
-          <h1 className="font-semibold mb-3">Add Content</h1>
+          <h1 className="font-semibold mb-3">Agregar contenido</h1>
           <button
             className="ml-auto focus:outline-none"
             onClick={() => {
@@ -112,7 +223,7 @@ export default function Course() {
           <input
             type="text"
             className="input"
-            placeholder="Name"
+            placeholder="Nombre"
             disabled={isSubmitting}
             required
             {...register('name')}
@@ -120,16 +231,22 @@ export default function Course() {
           <input
             type="text"
             className="input"
-            placeholder="Description"
+            placeholder="Descripcion"
             disabled={isSubmitting}
             required
             {...register('description')}
+          />
+          <input
+            type="text"
+            className="input"
+            placeholder="URL de la imagen"
+            {...register('imageUrl')}
           />
           <button className="btn" disabled={isSubmitting}>
             {isSubmitting ? (
               <Loader className="animate-spin mx-auto" />
             ) : (
-              'Save'
+              'Guardar'
             )}
           </button>
           {error ? (

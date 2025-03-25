@@ -55,61 +55,71 @@ export default function UsersTable({ data, isLoading }: UsersTableProps) {
   return (
     <>
       <div className="table-container">
-        <Table columns={['Name', 'Username', 'Status', 'Role', 'Created']}>
-          {isLoading
-            ? null
-            : data.map(
-                ({ id, firstName, lastName, role, isActive, username }) => (
-                  <tr key={id}>
-                    <TableItem>{`${firstName} ${lastName}`}</TableItem>
-                    <TableItem>{username}</TableItem>
-                    <TableItem>
-                      {isActive ? (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                          Inactive
-                        </span>
-                      )}
-                    </TableItem>
-                    <TableItem>{role}</TableItem>
-                    <TableItem className="text-right">
-                      <button
-                        className="text-indigo-600 hover:text-indigo-900 focus:outline-none"
-                        onClick={() => {
-                          setSelectedUserId(id);
+        {isLoading ? (
+          <Loader className="w-full my-5" />
+        ) : (
+          <Table
+            columns={[
+              'Nombre',
+              'Apellido',
+              'Usuario',
+              'Estado',
+              'Rol',
+              'Acciones',
+            ]}
+          >
+            {data.map(
+              ({ id, firstName, lastName, role, isActive, username }) => (
+                <tr key={id}>
+                  <TableItem>{firstName}</TableItem>
+                  <TableItem>{lastName}</TableItem>
+                  <TableItem>{username}</TableItem>
+                  <TableItem>
+                    {isActive ? (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Activo
+                      </span>
+                    ) : (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                        Inactivo
+                      </span>
+                    )}
+                  </TableItem>
+                  <TableItem>{role}</TableItem>
+                  <TableItem>
+                    <button
+                      className="text-indigo-600 hover:text-indigo-900 focus:outline-none"
+                      onClick={() => {
+                        setSelectedUserId(id);
+                        setValue('firstName', firstName);
+                        setValue('lastName', lastName);
+                        setValue('username', username);
+                        setValue('role', role);
+                        setValue('isActive', isActive);
 
-                          setValue('firstName', firstName);
-                          setValue('lastName', lastName);
-                          setValue('username', username);
-                          setValue('role', role);
-                          setValue('isActive', isActive);
-
-                          setUpdateShow(true);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-900 ml-3 focus:outline-none"
-                        onClick={() => {
-                          setSelectedUserId(id);
-                          setDeleteShow(true);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </TableItem>
-                  </tr>
-                ),
-              )}
-        </Table>
-
+                        setUpdateShow(true);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="text-red-600 hover:text-red-900 ml-3 focus:outline-none"
+                      onClick={() => {
+                        setSelectedUserId(id);
+                        setDeleteShow(true);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </TableItem>
+                </tr>
+              ),
+            )}
+          </Table>
+        )}
         {!isLoading && data.length < 1 ? (
           <div className="text-center my-5 text-gray-500">
-            <h1>Empty</h1>
+            <h1>No se encontraron datos</h1>
           </div>
         ) : null}
       </div>

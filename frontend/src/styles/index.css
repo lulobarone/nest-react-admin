@@ -24,8 +24,17 @@
 
 @layer components {
   .btn {
-    @apply p-3 bg-blue-500 rounded-md focus:outline-none text-white;
-    @apply hover:bg-blue-700 transition-all;
+    @apply p-3 bg-brand-primary rounded-md focus:outline-none text-white;
+    @apply hover:bg-red-500 transition-all;
+    @apply focus:ring disabled:opacity-50;
+  }
+  .btn.outline {
+    @apply p-3 bg-white border-2 border-red-500 rounded-md focus:outline-none text-red-500;
+    @apply hover:bg-red-500 hover:text-white transition-all;
+    @apply focus:ring disabled:opacity-50;
+  }
+  .btn.text {
+    @apply p-3 rounded-md focus:outline-none;
     @apply focus:ring disabled:opacity-50;
   }
   .btn.danger {
@@ -44,7 +53,7 @@
     @apply flex flex-col lg:flex-row gap-5 rounded-lg p-3 shadow overflow-x-auto border;
   }
   .sidebar {
-    @apply fixed h-full w-72 p-5 shadow flex flex-col transform -translate-x-72 bg-white lg:translate-x-0 transition-transform;
+    @apply fixed h-full w-72 p-5 shadow flex flex-col transform -translate-x-72 lg:translate-x-0 transition-transform;
   }
   .sidebar.show {
     @apply translate-x-0 !important;

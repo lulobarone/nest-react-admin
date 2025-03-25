@@ -6,14 +6,19 @@ import apiService from './ApiService';
 
 class ContentService {
   async findAll(
-    courseId: string,
-    contentQuery: ContentQuery,
-  ): Promise<Content[]> {
-    return (
-      await apiService.get<Content[]>(`/api/courses/${courseId}/contents`, {
-        params: contentQuery,
-      })
-    ).data;
+    params: ContentQuery,
+  ): Promise<{ contents: Content[]; count: number; courseName: string }> {
+    const response = await apiService.get(
+      `/api/courses/${params.courseId}/contents`,
+      {
+        params,
+      },
+    );
+    return {
+      contents: response.data.contents,
+      count: response.data.count,
+      courseName: response.data.courseName,
+    };
   }
 
   async save(

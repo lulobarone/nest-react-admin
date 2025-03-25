@@ -14,9 +14,14 @@ import TableItem from '../shared/TableItem';
 interface UsersTableProps {
   data: Course[];
   isLoading: boolean;
+  getCourses: () => Promise<void>;
 }
 
-export default function CoursesTable({ data, isLoading }: UsersTableProps) {
+export default function CoursesTable({
+  data,
+  isLoading,
+  getCourses,
+}: UsersTableProps) {
   const { authenticatedUser } = useAuth();
   const [deleteShow, setDeleteShow] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
@@ -37,6 +42,7 @@ export default function CoursesTable({ data, isLoading }: UsersTableProps) {
       setIsDeleting(true);
       await courseService.delete(selectedCourseId);
       setDeleteShow(false);
+      await getCourses();
     } catch (error) {
       setError(error.response.data.message);
     } finally {
@@ -49,6 +55,7 @@ export default function CoursesTable({ data, isLoading }: UsersTableProps) {
       await courseService.update(selectedCourseId, updateCourseRequest);
       setUpdateShow(false);
       reset();
+      await getCourses();
       setError(null);
     } catch (error) {
       setError(error.response.data.message);
@@ -58,52 +65,56 @@ export default function CoursesTable({ data, isLoading }: UsersTableProps) {
   return (
     <>
       <div className="table-container">
-        <Table columns={['Name', 'Description', 'Created']}>
-          {isLoading
-            ? null
-            : data.map(({ id, name, description, dateCreated }) => (
-                <tr key={id}>
-                  <TableItem>
-                    <Link to={`/courses/${id}`}>{name}</Link>
-                  </TableItem>
-                  <TableItem>{description}</TableItem>
-                  <TableItem>
-                    {new Date(dateCreated).toLocaleDateString()}
-                  </TableItem>
-                  <TableItem className="text-right">
-                    {['admin', 'editor'].includes(authenticatedUser.role) ? (
-                      <button
-                        className="text-indigo-600 hover:text-indigo-900 focus:outline-none"
-                        onClick={() => {
-                          setSelectedCourseId(id);
+        {isLoading ? (
+          <Loader className="w-full my-5" />
+        ) : (
+          <Table
+            columns={['Nombre', 'Descripcion', 'Fecha de creacion', 'Acciones']}
+          >
+            {data.map(({ id, name, description, dateCreated }) => (
+              <tr key={id}>
+                <TableItem>
+                  <Link to={`/courses/${id}`}>{name}</Link>
+                </TableItem>
+                <TableItem>{description}</TableItem>
+                <TableItem>
+                  {new Date(dateCreated).toLocaleDateString()}
+                </TableItem>
+                <TableItem>
+                  {['admin', 'editor'].includes(authenticatedUser.role) ? (
+                    <button
+                      className="text-indigo-600 hover:text-indigo-900 focus:outline-none"
+                      onClick={() => {
+                        setSelectedCourseId(id);
 
-                          setValue('name', name);
-                          setValue('description', description);
+                        setValue('name', name);
+                        setValue('description', description);
 
-                          setUpdateShow(true);
-                        }}
-                      >
-                        Edit
-                      </button>
-                    ) : null}
-                    {authenticatedUser.role === 'admin' ? (
-                      <button
-                        className="text-red-600 hover:text-red-900 ml-3 focus:outline-none"
-                        onClick={() => {
-                          setSelectedCourseId(id);
-                          setDeleteShow(true);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    ) : null}
-                  </TableItem>
-                </tr>
-              ))}
-        </Table>
+                        setUpdateShow(true);
+                      }}
+                    >
+                      Editar
+                    </button>
+                  ) : null}
+                  {authenticatedUser.role === 'admin' ? (
+                    <button
+                      className="text-red-600 hover:text-red-900 ml-3 focus:outline-none"
+                      onClick={() => {
+                        setSelectedCourseId(id);
+                        setDeleteShow(true);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  ) : null}
+                </TableItem>
+              </tr>
+            ))}
+          </Table>
+        )}
         {!isLoading && data.length < 1 ? (
           <div className="text-center my-5 text-gray-500">
-            <h1>Empty</h1>
+            <h1>No se encontraron datos</h1>
           </div>
         ) : null}
       </div>
@@ -111,25 +122,25 @@ export default function CoursesTable({ data, isLoading }: UsersTableProps) {
       <Modal show={deleteShow}>
         <AlertTriangle size={30} className="text-red-500 mr-5 fixed" />
         <div className="ml-10">
-          <h3 className="mb-2 font-semibold">Delete Course</h3>
+          <h3 className="mb-2 font-semibold">Eliminar curso</h3>
           <hr />
           <p className="mt-2">
-            Are you sure you want to delete the course? All of course's data
-            will be permanently removed.
+            ¿Estas seguro de que quieres eliminar el curso? Todos los datos del
+            curso se eliminaran permanentemente.
             <br />
-            This action cannot be undone.
+            <b>Esta accion no se puede revertir</b>
           </p>
         </div>
         <div className="flex flex-row gap-3 justify-end mt-5">
           <button
-            className="btn"
+            className="btn.text"
             onClick={() => {
               setError(null);
               setDeleteShow(false);
             }}
             disabled={isDeleting}
           >
-            Cancel
+            Cancelar
           </button>
           <button
             className="btn danger"
@@ -139,7 +150,7 @@ export default function CoursesTable({ data, isLoading }: UsersTableProps) {
             {isDeleting ? (
               <Loader className="mx-auto animate-spin" />
             ) : (
-              'Delete'
+              'Eliminar'
             )}
           </button>
         </div>
@@ -152,7 +163,7 @@ export default function CoursesTable({ data, isLoading }: UsersTableProps) {
       {/* Update Course Modal */}
       <Modal show={updateShow}>
         <div className="flex">
-          <h1 className="font-semibold mb-3">Update Course</h1>
+          <h1 className="font-semibold mb-3">Editar curso</h1>
           <button
             className="ml-auto focus:outline-none"
             onClick={() => {
@@ -173,14 +184,14 @@ export default function CoursesTable({ data, isLoading }: UsersTableProps) {
           <input
             type="text"
             className="input"
-            placeholder="Name"
+            placeholder="Nombre"
             required
             {...register('name')}
           />
           <input
             type="text"
             className="input"
-            placeholder="Description"
+            placeholder="Descripcion"
             required
             disabled={isSubmitting}
             {...register('description')}
@@ -189,7 +200,7 @@ export default function CoursesTable({ data, isLoading }: UsersTableProps) {
             {isSubmitting ? (
               <Loader className="animate-spin mx-auto" />
             ) : (
-              'Save'
+              'Guardar'
             )}
           </button>
           {error ? (

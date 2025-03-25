@@ -1,6 +1,12 @@
-FROM node:alpine as build
+FROM node:16-alpine as build
 
 WORKDIR /app
+
+RUN apk update && apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    bash
 
 COPY package.json .
 COPY yarn.lock .
@@ -9,7 +15,10 @@ RUN yarn
 
 COPY . .
 
-RUN yarn build
+RUN yarn build && ls -la ./dist
+
+RUN ls -la /app/dist
+
 
 #---
 
@@ -18,6 +27,12 @@ FROM node:alpine
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+RUN apk update && apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    bash
 
 COPY package.json .
 COPY yarn.lock .

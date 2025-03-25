@@ -16,7 +16,17 @@ export class StatsService {
     const numberOfUsers = await this.userService.count();
     const numberOfCourses = await this.courseService.count();
     const numberOfContents = await this.contentService.count();
+    const latestUsers = await this.userService.latestUsers();
+    const latestCourses = await this.courseService.latestCourses();
+    const coursesMoreContents = await this.courseService.coursesMoreContents();
 
-    return { numberOfUsers, numberOfContents, numberOfCourses };
+    return {
+      numberOfUsers,
+      numberOfContents,
+      numberOfCourses,
+      latestUsers,
+      latestCourses,
+      coursesMoreContents,
+    };
   }
 }

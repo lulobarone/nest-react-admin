@@ -1,34 +1,62 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader, Plus, X } from 'react-feather';
 import { useForm } from 'react-hook-form';
-import { useQuery } from 'react-query';
 
 import CoursesTable from '../components/courses/CoursesTable';
 import Layout from '../components/layout';
 import Modal from '../components/shared/Modal';
+import Pagination from '../components/shared/Pagination';
 import useAuth from '../hooks/useAuth';
 import CreateCourseRequest from '../models/course/CreateCourseRequest';
 import courseService from '../services/CourseService';
 
 export default function Courses() {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-
+  const [filterData, setFilterData] = useState({
+    name: '',
+    description: '',
+    dateCreated: '',
+  });
+  const [data, setData] = useState([]);
+  const [pagination, setPagination] = useState<{
+    current: number;
+    pageSize: number;
+  }>({
+    current: 1,
+    pageSize: 5,
+  });
   const [addCourseShow, setAddCourseShow] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [count, setCount] = useState<number>(0);
   const [error, setError] = useState<string>();
-
+  const [sortMenuVisible, setSortMenuVisible] = useState(false);
   const { authenticatedUser } = useAuth();
-  const { data, isLoading } = useQuery(
-    ['courses', name, description],
-    () =>
-      courseService.findAll({
-        name: name || undefined,
-        description: description || undefined,
-      }),
-    {
-      refetchInterval: 1000,
-    },
-  );
+
+  const sortData = (sortValue: 'name' | 'description' | 'dateCreated') => {
+    const sortedData = [...data].sort((a, b) =>
+      a[sortValue].localeCompare(b[sortValue]),
+    );
+    setData(sortedData);
+    setSortMenuVisible(false);
+  };
+
+  const getCourses = async () => {
+    try {
+      setIsLoading(true);
+      const { courses, count } = await courseService.findAll({
+        name: filterData.name || undefined,
+        description: filterData.description || undefined,
+        dateCreated: filterData.dateCreated || undefined,
+        page: pagination.current,
+        pageSize: pagination.pageSize,
+      });
+      setData(courses);
+      setCount(count);
+      setIsLoading(false);
+    } catch (error) {
+      setError('Error al buscar cursos');
+      setIsLoading(false);
+    }
+  };
 
   const {
     register,
@@ -42,50 +70,116 @@ export default function Courses() {
       await courseService.save(createCourseRequest);
       setAddCourseShow(false);
       reset();
+      await getCourses();
       setError(null);
     } catch (error) {
       setError(error.response.data.message);
     }
   };
 
+  const handlePage = (nextPage: number) => {
+    setFilterData({ name: '', description: '', dateCreated: '' });
+    setPagination((prev) => ({ ...prev, current: nextPage }));
+  };
+
+  useEffect(() => {
+    getCourses();
+  }, [pagination]);
+
   return (
     <Layout>
-      <h1 className="font-semibold text-3xl mb-5">Manage Courses</h1>
-      <hr />
-      {authenticatedUser.role !== 'user' ? (
-        <button
-          className="btn my-5 flex gap-2 w-full sm:w-auto justify-center"
-          onClick={() => setAddCourseShow(true)}
-        >
-          <Plus /> Add Course
-        </button>
-      ) : null}
-
+      <div className="flex justify-between items-start mb-10">
+        <h1 className="font-semibold text-3xl ">CURSOS</h1>
+        {authenticatedUser.role !== 'user' ? (
+          <button
+            className="btn flex gap-2 w-auto justify-center"
+            onClick={() => setAddCourseShow(true)}
+          >
+            <Plus /> Agregar curso
+          </button>
+        ) : null}
+      </div>
       <div className="table-filter">
-        <div className="flex flex-row gap-5">
+        <div className="flex flex-row  gap-5">
           <input
             type="text"
-            className="input w-1/2"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            className="input w-40"
+            placeholder="Nombre"
+            value={filterData.name}
+            onChange={(e) =>
+              setFilterData({ ...filterData, name: e.target.value })
+            }
           />
           <input
             type="text"
-            className="input w-1/2"
-            placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            className="input w-40"
+            placeholder="Descripcion"
+            value={filterData.description}
+            onChange={(e) =>
+              setFilterData({ ...filterData, description: e.target.value })
+            }
           />
+          <div className="flex items-center">
+            <p className="text-center w-30 mr-1">A partir de:</p>
+            <input
+              type="date"
+              className="input w-40"
+              value={filterData.dateCreated}
+              onChange={(e) =>
+                setFilterData({ ...filterData, dateCreated: e.target.value })
+              }
+            />
+          </div>
+          <button className="btn w-40" onClick={getCourses}>
+            Buscar
+          </button>
+          <div>
+            <button
+              className="btn outline w-40"
+              onClick={() => setSortMenuVisible(!sortMenuVisible)}
+            >
+              Ordenar
+            </button>
+            {sortMenuVisible && (
+              <div className="absolute z-2 bg-white border rounded shadow-md mt-1">
+                <button
+                  className="block px-4 py-2 text-left w-full hover:bg-gray-200"
+                  onClick={() => sortData('name')}
+                >
+                  Por nombre
+                </button>
+                <button
+                  className="block px-4 py-2 text-left w-full hover:bg-gray-200"
+                  onClick={() => sortData('description')}
+                >
+                  Por descripcion
+                </button>
+                <button
+                  className="block px-4 py-2 text-left w-full hover:bg-gray-200"
+                  onClick={() => sortData('dateCreated')}
+                >
+                  Por fecha
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <CoursesTable data={data} isLoading={isLoading} />
+      <CoursesTable data={data} isLoading={isLoading} getCourses={getCourses} />
 
-      {/* Add User Modal */}
+      {/* Paginacion */}
+      <Pagination
+        pagination={pagination}
+        handleNextPage={() => handlePage(pagination.current + 1)}
+        handlePrevPage={() => handlePage(pagination.current - 1)}
+        count={count}
+      />
+
+      {/* Add Course Modal */}
       <Modal show={addCourseShow}>
         <div className="flex">
-          <h1 className="font-semibold mb-3">Add Course</h1>
+          <h1 className="font-semibold mb-3">Agregar curso</h1>
           <button
             className="ml-auto focus:outline-none"
             onClick={() => {
@@ -105,7 +199,7 @@ export default function Courses() {
           <input
             type="text"
             className="input"
-            placeholder="Name"
+            placeholder="Nombre"
             disabled={isSubmitting}
             required
             {...register('name')}
@@ -113,7 +207,7 @@ export default function Courses() {
           <input
             type="text"
             className="input"
-            placeholder="Description"
+            placeholder="Descripcion"
             disabled={isSubmitting}
             required
             {...register('description')}
@@ -122,7 +216,7 @@ export default function Courses() {
             {isSubmitting ? (
               <Loader className="animate-spin mx-auto" />
             ) : (
-              'Save'
+              'Guardar'
             )}
           </button>
           {error ? (

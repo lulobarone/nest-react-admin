@@ -14,12 +14,14 @@ interface ContentsTableProps {
   data: Content[];
   courseId: string;
   isLoading: boolean;
+  getContents: () => Promise<void>;
 }
 
 export default function ContentsTable({
   data,
   isLoading,
   courseId,
+  getContents,
 }: ContentsTableProps) {
   const { authenticatedUser } = useAuth();
   const [deleteShow, setDeleteShow] = useState<boolean>(false);
@@ -41,6 +43,7 @@ export default function ContentsTable({
       setIsDeleting(true);
       await contentService.delete(courseId, selectedContentId);
       setDeleteShow(false);
+      await getContents();
     } catch (error) {
       setError(error.response.data.message);
     } finally {
@@ -57,6 +60,7 @@ export default function ContentsTable({
       );
       setUpdateShow(false);
       reset();
+      await getContents();
       setError(null);
     } catch (error) {
       setError(error.response.data.message);
@@ -66,50 +70,62 @@ export default function ContentsTable({
   return (
     <>
       <div className="table-container">
-        <Table columns={['Name', 'Description', 'Created']}>
-          {isLoading
-            ? null
-            : data.map(({ id, name, description, dateCreated }) => (
-                <tr key={id}>
-                  <TableItem>{name}</TableItem>
-                  <TableItem>{description}</TableItem>
-                  <TableItem>
-                    {new Date(dateCreated).toLocaleDateString()}
-                  </TableItem>
-                  <TableItem className="text-right">
-                    {['admin', 'editor'].includes(authenticatedUser.role) ? (
-                      <button
-                        className="text-indigo-600 hover:text-indigo-900 focus:outline-none"
-                        onClick={() => {
-                          setSelectedContentId(id);
+        {isLoading ? (
+          <Loader className="w-full my-5" />
+        ) : (
+          <Table
+            columns={[
+              'Nombre',
+              'Descripcion',
+              'Fecha de creacion',
+              'Imagen',
+              'Acciones',
+            ]}
+          >
+            {data.map(({ id, name, description, dateCreated, imageUrl }) => (
+              <tr key={id}>
+                <TableItem>{name}</TableItem>
+                <TableItem>{description}</TableItem>
+                <TableItem>
+                  {new Date(dateCreated).toLocaleDateString()}
+                </TableItem>
+                <TableItem>{imageUrl ? 'SI' : 'NO'}</TableItem>
+                <TableItem>
+                  {['admin', 'editor'].includes(authenticatedUser.role) ? (
+                    <button
+                      className="text-indigo-600 hover:text-indigo-900 focus:outline-none"
+                      onClick={() => {
+                        setSelectedContentId(id);
 
-                          setValue('name', name);
-                          setValue('description', description);
+                        setValue('name', name);
+                        setValue('description', description);
+                        setValue('imageUrl', imageUrl);
 
-                          setUpdateShow(true);
-                        }}
-                      >
-                        Edit
-                      </button>
-                    ) : null}
-                    {authenticatedUser.role === 'admin' ? (
-                      <button
-                        className="text-red-600 hover:text-red-900 ml-3 focus:outline-none"
-                        onClick={() => {
-                          setSelectedContentId(id);
-                          setDeleteShow(true);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    ) : null}
-                  </TableItem>
-                </tr>
-              ))}
-        </Table>
+                        setUpdateShow(true);
+                      }}
+                    >
+                      Editar
+                    </button>
+                  ) : null}
+                  {authenticatedUser.role === 'admin' ? (
+                    <button
+                      className="text-red-600 hover:text-red-900 ml-3 focus:outline-none"
+                      onClick={() => {
+                        setSelectedContentId(id);
+                        setDeleteShow(true);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  ) : null}
+                </TableItem>
+              </tr>
+            ))}
+          </Table>
+        )}
         {!isLoading && data.length < 1 ? (
           <div className="text-center my-5 text-gray-500">
-            <h1>Empty</h1>
+            <h1>No se encontraron datos</h1>
           </div>
         ) : null}
       </div>
@@ -121,10 +137,10 @@ export default function ContentsTable({
           <h3 className="mb-2 font-semibold">Delete Content</h3>
           <hr />
           <p className="mt-2">
-            Are you sure you want to delete the content? All of content's data
-            will be permanently removed.
+            ¿Estas seguro de que quieres eliminar el contenido del curso? Todos
+            los datos se eliminaran permanentemente.
             <br />
-            This action cannot be undone.
+            <b>Esta accion no se puede revertir</b>
           </p>
         </div>
         <div className="flex flex-row gap-3 justify-end mt-5">
@@ -136,7 +152,7 @@ export default function ContentsTable({
             }}
             disabled={isDeleting}
           >
-            Cancel
+            Cancelar
           </button>
           <button
             className="btn danger"
@@ -146,7 +162,7 @@ export default function ContentsTable({
             {isDeleting ? (
               <Loader className="mx-auto animate-spin" />
             ) : (
-              'Delete'
+              'Eliminar'
             )}
           </button>
         </div>
@@ -161,7 +177,7 @@ export default function ContentsTable({
       {selectedContentId ? (
         <Modal show={updateShow}>
           <div className="flex">
-            <h1 className="font-semibold mb-3">Update Content</h1>
+            <h1 className="font-semibold mb-3">Editar contenido</h1>
             <button
               className="ml-auto focus:outline-none"
               onClick={() => {
@@ -182,23 +198,29 @@ export default function ContentsTable({
             <input
               type="text"
               className="input"
-              placeholder="Name"
+              placeholder="Nombre"
               required
               {...register('name')}
             />
             <input
               type="text"
               className="input"
-              placeholder="Description"
+              placeholder="Descripcion"
               required
               disabled={isSubmitting}
               {...register('description')}
+            />
+            <input
+              type="text"
+              className="input"
+              placeholder="URL de la imagen"
+              {...register('imageUrl')}
             />
             <button className="btn" disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader className="animate-spin mx-auto" />
               ) : (
-                'Save'
+                'Guardar'
               )}
             </button>
             {error ? (

@@ -41,8 +41,17 @@ export class CourseController {
   }
 
   @Get()
-  async findAll(@Query() courseQuery: CourseQuery): Promise<Course[]> {
-    return await this.courseService.findAll(courseQuery);
+  async findAll(
+    @Query() courseQuery: CourseQuery,
+  ): Promise<{
+    courses: Course[];
+    count: number;
+  }> {
+    const { courses, total } = await this.courseService.findAll(courseQuery);
+    return {
+      courses,
+      count: total,
+    };
   }
 
   @Get('/:id')
@@ -78,8 +87,17 @@ export class CourseController {
   async findAllContentsByCourseId(
     @Param('id') id: string,
     @Query() contentQuery: ContentQuery,
-  ): Promise<Content[]> {
-    return await this.contentService.findAllByCourseId(id, contentQuery);
+  ): Promise<{ contents: Content[]; count: number; courseName: string }> {
+    const {
+      contents,
+      total,
+      courseName,
+    } = await this.contentService.findAllByCourseId(id, contentQuery);
+    return {
+      contents,
+      count: total,
+      courseName,
+    };
   }
 
   @Put('/:id/contents/:contentId')

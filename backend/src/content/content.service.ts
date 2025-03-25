@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { ILike } from 'typeorm';
+import { ILike, MoreThan } from 'typeorm';
 
 import { CourseService } from '../course/course.service';
 import { CreateContentDto, UpdateContentDto } from './content.dto';
@@ -14,12 +14,13 @@ export class ContentService {
     courseId: string,
     createContentDto: CreateContentDto,
   ): Promise<Content> {
-    const { name, description } = createContentDto;
+    const { name, description, imageUrl } = createContentDto;
     const course = await this.courseService.findById(courseId);
     return await Content.create({
       name,
       description,
       course,
+      imageUrl,
       dateCreated: new Date(),
     }).save();
   }
@@ -65,17 +66,32 @@ export class ContentService {
   async findAllByCourseId(
     courseId: string,
     contentQuery: ContentQuery,
-  ): Promise<Content[]> {
+  ): Promise<{ contents: Content[]; total: number; courseName: string }> {
+    const page = contentQuery.page;
+    const pageSize = contentQuery.pageSize;
+    const queryfind = {};
     Object.keys(contentQuery).forEach((key) => {
-      contentQuery[key] = ILike(`%${contentQuery[key]}%`);
+      if (!['pageSize', 'page', 'courseId'].includes(key)) {
+        queryfind[key] =
+          key === 'dateCreated'
+            ? MoreThan(contentQuery[key])
+            : ILike(`%${contentQuery[key]}%`);
+      }
     });
-    return await Content.find({
-      where: { courseId, ...contentQuery },
+    const [contents, total] = await Content.findAndCount({
+      where: { courseId, ...queryfind },
+      relations: ['course'],
       order: {
         name: 'ASC',
         description: 'ASC',
       },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
+    const courseName =
+      contents.length > 0 ? contents[0].course.name : 'SIN CONTENIDOS';
+
+    return { contents, total, courseName };
   }
 
   async update(
